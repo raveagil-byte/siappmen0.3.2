@@ -1,0 +1,47 @@
+{
+  "name": "cssd-mobile-app",
+  "version": "1.0.0",
+  "description": "CSSD Medical Distribution Mobile App",
+  "scripts": {
+    "serve": "vite",
+    "build": "vite build",
+    "android": "ionic cap add android && ionic cap sync android && ionic cap open android",
+    "ios": "ionic cap add ios && ionic cap sync ios && ionic cap open ios",
+    "sync": "ionic cap sync"
+  },
+  "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^5.2.0",
+    "@capacitor/android": "5.7.8",
+    "@capacitor/app": "^5.0.6",
+    "@capacitor/camera": "^5.0.7",
+    "@capacitor/core": "^5.5.0",
+    "@capacitor/haptics": "^5.0.6",
+    "@capacitor/ios": "^5.5.0",
+    "@capacitor/keyboard": "^5.0.6",
+    "@capacitor/local-notifications": "^5.0.8",
+    "@capacitor/network": "^5.0.8",
+    "@capacitor/preferences": "^5.0.8",
+    "@capacitor/push-notifications": "^5.1.2",
+    "@capacitor/status-bar": "^5.0.6",
+    "@ionic/vue": "^7.5.0",
+    "@ionic/vue-router": "^7.5.0",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
+    "axios": "^1.5.0",
+    "ionicons": "^7.1.0",
+    "pinia": "^2.1.6",
+    "qrcode": "^1.5.3",
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^5.5.0",
+    "@ionic/cli": "^7.1.1",
+    "@types/qrcode": "^1.5.6",
+    "@vitejs/plugin-vue": "^4.3.4",
+    "@vue/cli-plugin-typescript": "^5.0.9",
+    "@vue/cli-service": "5.0.9",
+    "typescript": "^5.9.3",
+    "vite": "^4.4.9"
+  }
+}

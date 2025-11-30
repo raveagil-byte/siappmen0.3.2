@@ -1,0 +1,3 @@
+cd frontend-web
+npm install
+npm run dev

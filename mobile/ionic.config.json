@@ -1,0 +1,8 @@
+{
+  "name": "cssd qr",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite",
+  "main": "src/main.ts"
+}
