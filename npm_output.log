@@ -1,0 +1,27 @@
+
+> cssd-web-admin@1.0.0 dev
+> vite
+
+2:07:11 AM [vite] (client) Re-optimizing dependencies because lockfile has changed
+
+  VITE v7.2.4  ready in 901 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+(!) Failed to run dependency scan. Skipping dependency pre-bundling. Error: The following dependencies are imported but could not be resolved:
+
+  @/stores/auth (imported by /app/frontend-web/src/App.vue?id=0)
+  @/views/Login.vue (imported by /app/frontend-web/src/router/index.js)
+  @/layouts/MainLayout.vue (imported by /app/frontend-web/src/router/index.js)
+  @/views/Dashboard.vue (imported by /app/frontend-web/src/router/index.js)
+  @/views/Units.vue (imported by /app/frontend-web/src/router/index.js)
+  @/views/Instruments.vue (imported by /app/frontend-web/src/router/index.js)
+  @/views/Transactions.vue (imported by /app/frontend-web/src/router/index.js)
+  @/views/TransactionDetail.vue (imported by /app/frontend-web/src/router/index.js)
+  @/views/Reports.vue (imported by /app/frontend-web/src/router/index.js)
+  @/views/ActivityLogs.vue (imported by /app/frontend-web/src/router/index.js)
+
+Are they installed?
+    at file:///app/frontend-web/node_modules/vite/dist/node/chunks/config.js:32551:33
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/frontend-web/node_modules/vite/dist/node/chunks/config.js:34759:15
