@@ -22,40 +22,47 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/user/device-token', [AuthController::class, 'updateDeviceToken']);
 
-    // Dashboard
-    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    // Dashboard (accessible by admin and validator)
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->middleware('role:admin,validator');
 
-    // Units
-    Route::apiResource('units', UnitController::class);
-    Route::get('/units/{unit}/qr', [UnitController::class, 'getQRCode']);
-    Route::post('/units/{unit}/regenerate-qr', [UnitController::class, 'regenerateQRCode']);
+    // Units (managed by admin)
+    Route::apiResource('units', UnitController::class)->middleware('role:admin');
+    Route::get('/units/{unit}/qr', [UnitController::class, 'getQRCode'])->middleware('role:admin');
+    Route::post('/units/{unit}/regenerate-qr', [UnitController::class, 'regenerateQRCode'])->middleware('role:admin');
 
-    // Instruments
-    Route::apiResource('instruments', InstrumentController::class);
+    // Instruments (managed by admin)
+    Route::apiResource('instruments', InstrumentController::class)->middleware('role:admin');
 
     // Transactions
     Route::prefix('transactions')->group(function () {
+        // All authenticated users can view transactions.
         Route::get('/', [TransactionController::class, 'index']);
         Route::get('/{transaction}', [TransactionController::class, 'show']);
-        Route::post('/scan-unit', [TransactionController::class, 'scanUnit'])->middleware('throttle:scan');
-        Route::post('/create-steril', [TransactionController::class, 'createSteril'])->middleware('throttle:transaction');
-        Route::post('/create-kotor', [TransactionController::class, 'createKotor'])->middleware('throttle:transaction');
-        Route::post('/validate', [TransactionController::class, 'validate'])->middleware('throttle:transaction');
+
+        // Scanning and creating transactions are restricted to operators.
+        Route::post('/scan-unit', [TransactionController::class, 'scanUnit'])->middleware('throttle:scan', 'role:operator');
+        Route::post('/create-steril-distribution', [TransactionController::class, 'createSterilDistribution'])->middleware('throttle:transaction', 'role:operator');
+        Route::post('/create-kotor-pickup', [TransactionController::class, 'createKotorPickup'])->middleware('throttle:transaction', 'role:operator');
+        Route::post('/create-cssd-return', [TransactionController::class, 'createCssdReturn'])->middleware('throttle:transaction', 'role:operator');
+
+        // Validation is restricted to validators.
+        Route::post('/validate', [TransactionController::class, 'validateTransaction'])->middleware('throttle:transaction', 'role:validator');
+
+        // All roles can cancel, but logic is handled in the service/controller.
         Route::post('/{transaction}/cancel', [TransactionController::class, 'cancel'])->middleware('throttle:transaction');
 
-        // Transaction Photos
+        // Transaction Photos (restricted to operators)
+        Route::post('/{transaction}/photos', [TransactionPhotoController::class, 'upload'])->middleware('role:operator');
+        Route::delete('/{transaction}/photos/{photo}', [TransactionPhotoController::class, 'destroy'])->middleware('role:operator');
         Route::get('/{transaction}/photos', [TransactionPhotoController::class, 'index']);
-        Route::post('/{transaction}/photos', [TransactionPhotoController::class, 'upload']);
-        Route::delete('/{transaction}/photos/{photo}', [TransactionPhotoController::class, 'destroy']);
     });
 
-    // Reports
-    Route::get('/report/export-excel', [ReportController::class, 'exportExcel']);
+    // Reports (admin and validator only)
+    Route::get('/report/export-excel', [ReportController::class, 'exportExcel'])->middleware('role:admin,validator');
 
-    // Activity Logs
-    Route::apiResource('activity-logs', ActivityLogController::class)->only(['index', 'show']);
+    // Activity Logs (admin and validator only)
+    Route::apiResource('activity-logs', ActivityLogController::class)->only(['index', 'show'])->middleware('role:admin,validator');
 
-    // QR
+    // QR parsing can be done by any authenticated user.
     Route::post('/qr/parse', [QRController::class, 'parse']);
-    Route::get('/qr/generate', [QRController::class, 'generate']);
 });

@@ -1,82 +1,67 @@
 <template>
-  <div class="dashboard">
+  <div class="dashboard-container">
+    <h1 class="dashboard-title">CSSD Dashboard</h1>
+
+    <!-- Summary Stats Grid -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon">🏥</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.summary?.total_units || 0 }}</div>
-          <div class="stat-label">Total Units</div>
-        </div>
+        <h3>Total Units</h3>
+        <p>{{ stats.summary?.total_units || 0 }}</p>
       </div>
-
       <div class="stat-card">
-        <div class="stat-icon">🔧</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.summary?.total_instruments || 0 }}</div>
-          <div class="stat-label">Total Instruments</div>
-        </div>
+        <h3>Total Instruments</h3>
+        <p>{{ stats.summary?.total_instruments || 0 }}</p>
       </div>
-
       <div class="stat-card">
-        <div class="stat-icon">📦</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.summary?.total_transactions || 0 }}</div>
-          <div class="stat-label">Total Transactions</div>
-        </div>
+        <h3>Pending Transactions</h3>
+        <p>{{ stats.summary?.pending_transactions || 0 }}</p>
       </div>
-
       <div class="stat-card">
-        <div class="stat-icon">⏳</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.summary?.pending_transactions || 0 }}</div>
-          <div class="stat-label">Pending Transactions</div>
-        </div>
+        <h3>Completed Transactions</h3>
+        <p>{{ stats.summary?.completed_transactions || 0 }}</p>
       </div>
     </div>
 
-    <div class="charts-grid">
+    <!-- Stock Levels Grid -->
+    <div class="stock-grid">
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">CSSD Stock</h3>
+          <h3 class="card-title">CSSD Inventory</h3>
         </div>
-        <div class="stock-info">
+        <div class="card-body">
           <div class="stock-item">
-            <span class="stock-label">Steril:</span>
-            <span class="stock-value">{{ stats.stock?.cssd?.steril || 0 }}</span>
+            <span>Sterile Stock:</span>
+            <strong>{{ stats.stock?.cssd?.steril || 0 }}</strong>
           </div>
           <div class="stock-item">
-            <span class="stock-label">Kotor:</span>
-            <span class="stock-value">{{ stats.stock?.cssd?.kotor || 0 }}</span>
+            <span>Dirty Stock:</span>
+            <strong>{{ stats.stock?.cssd?.kotor || 0 }}</strong>
           </div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Units Stock</h3>
+          <h3 class="card-title">All Units Inventory</h3>
         </div>
-        <div class="stock-info">
+        <div class="card-body">
           <div class="stock-item">
-            <span class="stock-label">Steril:</span>
-            <span class="stock-value">{{ stats.stock?.units?.steril || 0 }}</span>
+            <span>In-Use Stock:</span>
+            <strong>{{ stats.stock?.units?.in_use || 0 }}</strong>
           </div>
           <div class="stock-item">
-            <span class="stock-label">Kotor:</span>
-            <span class="stock-value">{{ stats.stock?.units?.kotor || 0 }}</span>
-          </div>
-          <div class="stock-item">
-            <span class="stock-label">In Use:</span>
-            <span class="stock-value">{{ stats.stock?.units?.in_use || 0 }}</span>
+            <span>Dirty Stock:</span>
+            <strong>{{ stats.stock?.units?.kotor || 0 }}</strong>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Recent Transactions Table -->
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Recent Transactions</h3>
+        <h3 class="card-title">Recent Activity</h3>
       </div>
-      <div class="table-container">
+      <div class="table-responsive">
         <table class="table">
           <thead>
             <tr>
@@ -85,25 +70,29 @@
               <th>Unit</th>
               <th>Status</th>
               <th>Created By</th>
+              <th>Validated By</th>
               <th>Date</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="transaction in stats.recent_transactions" :key="transaction.id">
-              <td>#{{ transaction.id }}</td>
+            <tr v-if="loading">
+              <td colspan="7" class="text-center">Loading...</td>
+            </tr>
+            <tr v-else-if="stats.recent_transactions?.length === 0">
+              <td colspan="7" class="text-center">No recent transactions found.</td>
+            </tr>
+            <tr v-for="tx in stats.recent_transactions" :key="tx.id">
+              <td>#{{ tx.id }}</td>
               <td>
-                <span :class="['badge', transaction.type === 'steril' ? 'badge-success' : 'badge-warning']">
-                  {{ transaction.type.toUpperCase() }}
-                </span>
+                <span :class="['badge', getTransactionTypeClass(tx.type)]">{{ formatTransactionType(tx.type) }}</span>
               </td>
-              <td>{{ transaction.unit?.name }}</td>
+              <td>{{ tx.unit?.name || 'N/A' }}</td>
               <td>
-                <span :class="['badge', getStatusClass(transaction.status)]">
-                  {{ transaction.status.toUpperCase() }}
-                </span>
+                <span :class="['badge', getStatusClass(tx.status)]">{{ tx.status }}</span>
               </td>
-              <td>{{ transaction.creator?.name }}</td>
-              <td>{{ formatDate(transaction.created_at) }}</td>
+              <td>{{ tx.creator?.name || 'N/A' }}</td>
+              <td>{{ tx.validator?.name || 'N/A' }}</td>
+              <td>{{ formatDate(tx.created_at) }}</td>
             </tr>
           </tbody>
         </table>
@@ -113,109 +102,107 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '@/services/api'
+import { ref, onMounted } from 'vue';
+import api from '@/services/api';
 
-const stats = ref({})
-const loading = ref(false)
+const stats = ref({});
+const loading = ref(false);
 
 const fetchStats = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    const response = await api.get('/dashboard/stats')
-    stats.value = response.data.data
+    const response = await api.get('/dashboard/stats');
+    stats.value = response.data.data;
   } catch (error) {
-    console.error('Failed to fetch stats:', error)
+    console.error('Failed to fetch dashboard stats:', error);
+    // You might want to show a toast or an error message to the user.
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
-const getStatusClass = (status) => {
-  const classes = {
-    pending: 'badge-warning',
-    validated: 'badge-success',
-    cancelled: 'badge-danger'
-  }
-  return classes[status] || 'badge-info'
-}
+const getStatusClass = (status) => ({
+  pending: 'badge-warning',
+  validated: 'badge-success',
+  completed: 'badge-success',
+  cancelled: 'badge-danger',
+}[status] || 'badge-secondary');
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleString()
-}
+const getTransactionTypeClass = (type) => ({
+  distribusi_steril: 'badge-info',
+  pengambilan_kotor: 'badge-primary',
+  pengembalian_cssd: 'badge-dark',
+}[type] || 'badge-secondary');
 
-onMounted(() => {
-  fetchStats()
-})
+const formatTransactionType = (type) => (type || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+const formatDate = (date) => new Date(date).toLocaleString();
+
+onMounted(fetchStats);
 </script>
 
 <style scoped>
-.dashboard {
-  max-width: 1400px;
+.dashboard-container {
+  padding: 2rem;
 }
-
-.stats-grid {
+.dashboard-title {
+  margin-bottom: 2rem;
+}
+.stats-grid, .stock-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
-
-.stat-card {
-  background: white;
-  border-radius: 0.5rem;
+.stat-card, .card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-
-.stat-icon {
-  font-size: 2.5rem;
+.stat-card h3 {
+  font-size: 1rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
 }
-
-.stat-value {
+.stat-card p {
   font-size: 2rem;
   font-weight: 700;
-  color: var(--gray-900);
+  margin: 0;
 }
-
-.stat-label {
-  color: var(--gray-600);
-  font-size: 0.875rem;
+.card-header {
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
 }
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.stock-info {
-  padding: 1rem 0;
-}
-
 .stock-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--gray-200);
+  padding: 0.5rem 0;
 }
-
-.stock-item:last-child {
-  border-bottom: none;
+.table-responsive {
+  overflow-x: auto;
 }
-
-.stock-label {
-  font-weight: 500;
-  color: var(--gray-700);
+.table {
+  width: 100%;
+  border-collapse: collapse;
 }
-
-.stock-value {
-  font-size: 1.25rem;
+.table th, .table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+.badge {
+  padding: 0.4em 0.7em;
+  border-radius: 0.25rem;
+  color: #fff;
+  font-size: 0.8em;
   font-weight: 600;
-  color: var(--primary-color);
 }
+.badge-primary { background: #007bff; }
+.badge-secondary { background: #6c757d; }
+.badge-success { background: #28a745; }
+.badge-danger { background: #dc3545; }
+.badge-warning { background: #ffc107; color: #212529; }
+.badge-info { background: #17a2b8; }
+.badge-dark { background: #343a40; }
 </style>

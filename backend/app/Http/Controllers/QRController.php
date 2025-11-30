@@ -2,21 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\QRService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Response;
+use App\Models\Unit;
+use App\Models\Transaction;
 
 class QRController extends Controller
 {
-    protected $qrService;
-
-    public function __construct(QRService $qrService)
-    {
-        $this->qrService = $qrService;
-    }
-
     /**
-     * Parse QR code content string
+     * Parse a QR code and return the associated data.
      */
     public function parse(Request $request)
     {
@@ -24,39 +17,35 @@ class QRController extends Controller
             'qr_content' => 'required|string',
         ]);
 
-        try {
-            $result = $this->qrService->parseQRCode($request->qr_content);
+        $content = $request->input('qr_content');
 
-            return response()->json([
-                'success' => true,
-                'data' => $result,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
+        if (str_starts_with($content, 'UNIT:')) {
+            $uuid = str_replace('UNIT:', '', $content);
+            $unit = Unit::where('uuid', $uuid)->first();
+
+            if ($unit) {
+                return response()->json([
+                    'success' => true,
+                    'type' => 'unit',
+                    'data' => $unit,
+                ]);
+            }
+        } elseif (str_starts_with($content, 'TRANS:')) {
+            $uuid = str_replace('TRANS:', '', $content);
+            $transaction = Transaction::with('items.instrument', 'unit')->where('uuid', $uuid)->first();
+
+            if ($transaction) {
+                return response()->json([
+                    'success' => true,
+                    'type' => 'transaction',
+                    'data' => $transaction,
+                ]);
+            }
         }
-    }
 
-    /**
-     * Generate QR code image for given content (GET /api/qr/generate?content=TEXT)
-     */
-    public function generate(Request $request)
-    {
-        $request->validate([
-            'content' => 'required|string',
-            'size' => 'nullable|integer|min:100|max:1000',
-        ]);
-
-        $size = $request->get('size', 300);
-        $content = $request->get('content');
-
-        $qrImage = $this->qrService->generateQRCode($content, $size);
-
-        return Response::make($qrImage, 200, [
-            'Content-Type' => 'image/png',
-            'Content-Disposition' => 'inline; filename="qrcode.png"',
-        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid or unrecognized QR code format.',
+        ], 404);
     }
 }
